@@ -5,7 +5,7 @@ TMP_CONFIG="/tmp/ddns_tmp_config"
 
 #Repo info
 GITHUB_REPO_BASE="https://raw.githubusercontent.com/schmidhorst/synology-ddns-IPv6/main"
-PHP_FILES=("strato46.php" "ionos46.php" "ipv64.php")
+PHP_FILES=("strato46.php" "ionos46.php" "ipv64.php" "securepoint.php")
 
 # DDNS Providers
 PROVIDERS="
@@ -20,6 +20,10 @@ PROVIDERS="
   modulepath=/usr/syno/bin/ddns/ipv64.php
   queryurl=https://ipv64.net/nic/update
   website=https://ipv64.net
+[Securepoint spDYN]
+  modulepath=/usr/syno/bin/ddns/securepoint.php
+  queryurl=https://update.spdyn.de/nic/update
+  website=https://spdyn.de
 "
 
 # Update the configuration file
