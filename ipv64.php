@@ -1,5 +1,5 @@
 #!/usr/bin/php -d open_basedir=/usr/syno/bin/ddns/:/tmp/:/var/log/
-<?php # Attention: No empty line before this!!!! The output must start with 'good' or 'nochg' in the 1st line for an success message
+<?php # Attention: No empty line before this!!!! The output must start with 'good' or 'nochg' in the 1st line for a success message
 # https://community.synology.com/enu/forum/1/post/130109
 # https://www.computerbase.de/forum/threads/ddns-mit-ipv6.2057194/
 # https://www.programmierer-forum.de/ipv6-ddns-mit-synology-nas-evtl-auf-andere-nas-router-bertragbar-t319393.htm
@@ -18,7 +18,7 @@
 # Parameters: 1=account (Domain), 2=pwd (use single quotes!) 3=hostname (incl. sub domain), 4=ip (IPv4)
 
 # if the IP addresses are sent too often to Strato, then you will get "abuse ..."
-# DSM runs this normally once per day, but in some cases ervery few seconds
+# DSM runs this normally once per day, but in some cases every few seconds
 # ==> Workaround: If last update of the logfile is less than ageMin_h, don't send but simply return "nochg ..." to DSM
 $syslogSuccess=false; # true: Generate LogCenter entry always, not only for failure
 $syslogSkipped=false; # true: Generate LogCenter entry if it was tirggerd, but skipped
@@ -60,25 +60,27 @@ if (file_exists($LOG_NAME)) {
 }
 
 # https://stackoverflow.com/questions/1062716/php-returning-the-last-line-in-a-file
-$LOG_NAME_ESC = escapeshellarg($LOG_NAME); // for the security concious (should be everyone!)
-$lastLogLine = `tail -n 1 $LOG_NAME_ESC`;
-$lastLogLine = rtrim($lastLogLine, "\n");
-# should be eg.:
-# returned result: nochg 87.175.192.182 2003:c8:72e:a000:9209:d0ff:fe05:c05f
+if (file_exists($LOG_NAME)) { // will not exist on first run
+  $LOG_NAME_ESC = escapeshellarg($LOG_NAME); // for the security conscious (should be everyone!)
+  $lastLogLine = `tail -n 1 $LOG_NAME_ESC`;
+  $lastLogLine = rtrim($lastLogLine, "\n");
+  # should be eg.:
+  # returned result: nochg 198.51.100.182 2001:db8:1:2:3:4:5:6
+}
 $fLOG = fopen($LOG_NAME, 'a+'); # open_basedir option required!
 $date = date('Y-m-d H:i:s');
 $user=get_current_user();
-$msg="\n$date Start $argv[0] as $user\n";
+$msg="\n$date Start $argv[0] as $user";
 # echo("\n\n$date Start\n");
 if ($argc !== 5) {
-  echo "Error: Bad param count $argc instead of 5!\n $argv[0]  <account> '<PW>' <host> <ipv4>\n";
+  echo "\nError: Bad param count $argc instead of 5!\n $argv[0]  <account> '<PW>' <host> <ipv4>\n";
   $msg .= "  Error: Bad param count $argc instead of 5!\n $argv[0] <account> '<PW>' <host> <ipv4>\n";
   fwrite($fLOG, "$msg");
   fclose($fLOG);
   exit("Error: Bad param count $argc instead of 5!\n");
 }
 else {
-  $msg .= ", ParamCount $argc is ok.";
+  $msg .= ", ParamCount $argc is ok.\n";
 }
 # $str   = @file_get_contents('/proc/uptime'); # Failed to open stream: Operation not permitted
 $str=shell_exec('cat /proc/uptime');
@@ -156,7 +158,8 @@ if (filter_var($ipv6, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
 $url = 'https://ipv64.net/nic/update?output=min&key=' . $pwd . '&domain=' . $hostname . '&'; 
 $unchanged=true;
 $myips = '';
-if (isGlobalIPv4_DSaware($ip)) {
+$isglobalipv4 = isGlobalIPv4_DSaware($ip);
+if ($isglobalipv4) {
   $myips = 'ip=' . $ip;
   }
 else {
@@ -186,12 +189,14 @@ if ($myips == "") {
 $url .=  $myips;
 $msg .= "  used url: $url\n";
 
-$res="nochg $ip $ipv6\n"; # preset, optionally changed later
+$res="nochg"; # preset, optionally changed later
 # $msg .= "  last sending before $age_h h\n";
-if (strpos($lastLogLine, $ip) == false ) {  
+if (strpos($lastLogLine, $ip) == false && $isglobalipv4) {  
   $unchanged=false;
+  $res .= " $ip";
   # $msg .= "  new IPv4 $ip, not found in '$lastLogLine'\n";
 }
+$res .= " $ipv6\n";
 if ( ($age_h > $ageMin_h) || (! $unchanged ) )  {
   # Send now the actual IPs to the DDNS provider Strato:
   $req = curl_init();
